@@ -1,4 +1,7 @@
-#Lacks repetion draw
+#TODO Repetion draw implementation
+#TODO Increase robustness of human player getMove
+#TODO Add func to take piece coords + move and execute move
+#TODO Crate func to return board state for AI learning or similar
 
 class Board:
     """
@@ -154,7 +157,7 @@ class Board:
         """
         Gets a move from a human player and executes it.
         """
-        if (self.checkCheckMate() and self.checkCheck(color = self.cPlayer)):
+        if (self.checkLegalMoves() and self.checkCheck(color = self.cPlayer)):
             print("Checkmate, player:", str(self.cPlayer) + ". Lost the game.")
             self.gameOver = True
             return
@@ -316,7 +319,7 @@ class Board:
                     return True
         return False
     
-    def checkCastling(self): # TODO add check for for check!
+    def checkCastling(self):
         """
         Checks if a player can castle.
         Returns [bool, bool], where bool1 is if short castle is possible and bool2 for long.
@@ -326,7 +329,7 @@ class Board:
             return [False, False]
         
         castlingPossible = [True, True]
-        for i in range(2): #Hardcodes since only the first two rooks can castle and dynamicly doing if for len might lead to problems.
+        for i in range(2): #Hardcodes since only the first two rooks can castle and dynamicly doing it for len might lead to problems with promoted pieces.
             if self.pieces[self.cPlayer][1][i].getFirstMove():
                 for x in range(sorted([self.pieces[self.cPlayer][1][i].getX(), king.getX()])):
                     if self.isOccupied(x, king.getY()):
@@ -339,7 +342,7 @@ class Board:
         oldKx, oldKy = king.getX(), king.getY()
         for i in range(len(castlingPossible)):
             if castlingPossible[i]:
-                #Does virtual castle and checks if king can be attack after castling
+                #Does virtual castle and checks if king can be attacked after castling
 
                 oldRx, oldRy = self.pieces[self.cPlayer][1][i].getX(), self.pieces[self.cPlayer][1][i].getY()
                 self.doCastle(castleNot[i])
@@ -420,9 +423,9 @@ class Board:
                     return True
         return False
     
-    def checkCheckMate(self):
+    def checkLegalMoves(self):
         """
-        Checks if the current player is in checkmate by looking for any legalmove that doesnt end with king being in check.
+        Checks if the current player has any legalmove that doesnt end with king being in check.
         """
         legalMoves = []
         pieces = list(self.pieces[self.cPlayer].values())
@@ -430,12 +433,22 @@ class Board:
             for j in range(len(pieces[i])):
                 legalMoves = pieces[i][j].legalMoves(self)
                 for move in legalMoves:
-                    if move[2]:
-                        if not self.vCapture([i, j], move[0:2]):
-                            return False
-                    else:
-                        if not self.vMove([i, j], move[0:2]):
-                            return False
+                    if not self.checkLegal([i, j], move):
+                        return False
+        return True
+    
+    def checkLegal(self, pieceID, move):
+        """
+        Checks if a move is legal for a piece.
+        pieceID contains the ID for the piece.
+        move is the move to to checked.
+        """
+        if move[2]:
+            if not self.vCapture(pieceID, move[0:2]):
+                return False
+        else:
+            if not self.vMove(pieceID, move[0:2]):
+                return False
         return True
     
     def vMove(self, pieceID, move):
@@ -500,7 +513,7 @@ class Board:
         Checks if the current player has no legalmoves, if this is the case it will be a draw.
         """
         if not self.checkCheck(color = self.cPlayer):
-            if self.checkCheckMate():
+            if self.checkLegalMoves():
                 return True
         return False
 
