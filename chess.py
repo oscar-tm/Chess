@@ -172,7 +172,7 @@ class Board:
             piecePos = input("Input the position of the piece you can to move. (X Y)\n")
             piecePos = piecePos.strip().split(" ")
             try:
-                i, j = self.findPiece(int(piecePos[0]) - 1, int(piecePos[1]) - 1, self.cPlayer)
+                i, j = self.findPiece([int(piecePos[0]) - 1, int(piecePos[1]) - 1], self.cPlayer)
             except IndexError:
                 pass
 
@@ -230,11 +230,17 @@ class Board:
         self.cPlayer = -self.cPlayer
         self.NOMoves += 1
 
-    def doMove(self, pieceID, move):
+    def doMove(self, pieceID = None, move = None, location = None):
         """
-        Moves a piece using move and piecedata.
+        Moves a piece using move and piecedata or location.
         """
-        self.pieces[self.cPlayer][pieceID[0]][pieceID[1]].move(move)
+        if location != None and pieceID == None:
+            pieceID = self.findPiece(location, self.cPlayer)
+
+        if pieceID != None:
+            self.pieces[self.cPlayer][pieceID[0]][pieceID[1]].move(move)
+        else:
+            raise Exception("No piece or location data")
 
     def doCapture(self, pieceID, move):
         """
@@ -271,9 +277,9 @@ class Board:
             self.pieces[piece.getColor()][pieceDict[desiredPiece]][-1].move([piece.getX(), piece.getY()])
 
         else:
-            raise NotImplementedError #Make custom error later.
+            raise Exception("Tried to promote piece that is not a pawn.")
 
-    def findPiece(self, x, y, color):
+    def findPiece(self, location, color):
         """
         Tries to find a piece of input color and on coords input x, y.
 
@@ -282,13 +288,11 @@ class Board:
         pieces = list(self.pieces[color].values())
         for i in range(len(pieces)):
             for j in range(len(pieces[i])):
-                if self.checkEnPassant(x, y, pieces[i][j]):
-                    return i, j
-                if pieces[i][j].getX() == x and pieces[i][j].getY() == y and not pieces[i][j].getCaptured():
+                if pieces[i][j].getX() == location[0] and pieces[i][j].getY() == location[1] and not pieces[i][j].getCaptured():
                     return i, j
         return None, None
 
-    def isOccupied(self, x, y):
+    def isOccupied(self, location):
         """
         Checks if there is a piece on the input coords x, y.
 
@@ -297,25 +301,25 @@ class Board:
         for color in [-1, 1]:
             for pieces in self.pieces[color].values():
                 for piece in pieces:
-                    if self.checkEnPassant(x, y, piece):
+                    if self.checkEnPassant([location[0], location[1]], piece):
                         return True
-                    if piece.getX() == x and piece.getY() == y and not piece.getCaptured():
+                    if piece.getX() == location[0] and piece.getY() == location[1] and not piece.getCaptured():
                         return True
         return False
     
-    def checkCapture(self, x, y, color):
+    def checkCapture(self, location, color):
         """
         Checks if a move is a capture.
-        x, y the coordinates in question.
+        locations is the coordinates in question.
         color is the color of the current player.
 
         Returns true if it is a capture, false if it is not a capture
         """
         for pieces in self.pieces[-color].values():
             for piece in pieces:
-                if self.checkEnPassant(x, y, piece):
+                if self.checkEnPassant([location[0], location[1]], piece):
                     return True
-                if piece.getX() == x and piece.getY() == y and not piece.getCaptured():
+                if piece.getX() == location[0] and piece.getY() == location[1] and not piece.getCaptured():
                     return True
         return False
     
@@ -366,17 +370,17 @@ class Board:
             self.pieces[self.cPlayer][5][0].move(6, self.pieces[self.cPlayer][5][0].getY())
             self.pieces[self.cPlayer][1][0].move(5, self.pieces[self.cPlayer][1][0].getY())
     
-    def checkEnPassant(self, x, y, piece):
+    def checkEnPassant(self, location, piece):
         """
         Checks if the piece a piece can be captured using en passant.
-        Input x, y the corrds of the sqaure being considered.
+        Input location are the coords of the sqaure being considered.
         Piece is the piece being considered.
 
         Returns true if is it possible otherwise false.
         """
         if piece.getType() == "Pawn":
             if piece.getEnPassant():
-                if x == piece.getX() and y == piece.getY()  - piece.getColor():
+                if location[0] == piece.getX() and location[1] == piece.getY()  - piece.getColor():
                     return True
         return False
     
@@ -395,7 +399,7 @@ class Board:
             if color != None:
                 king = self.pieces[color][5][0]
             else:
-                raise NotImplementedError #Custom error later
+                raise Exception("No args given.")
 
         """
         When looking for check we can check the legal moves for Queen, knight and pawn from the kings location and if there are any caputering move the king will be in check!
@@ -487,23 +491,23 @@ class Board:
         if self.NOMoves > self.maxMoves:
             return True
         
-        pieces = [[], [], []]
+        piecesToCheck = [[], [], []]
         for color in [-1, 1]:
             for pieces in self.pieces[color].values():
-                for piece in piece:
+                for piece in pieces:
                     if not piece.getCaptured():
-                        pieces[color].append(piece)
+                        piecesToCheck[color].append(piece)
                         if piece.getType() not in ["King", "Knight", "Bishop"]:
                             return False
         
-        if len(pieces[1]) > 2 or len(pieces[-1]) > 2:
+        if len(piecesToCheck[1]) > 2 or len(piecesToCheck[-1]) > 2:
             return False
 
-        if len(pieces[1]) == 2 and len(pieces[-1]) == 2:
-            if pieces[1].getType() == "Knight" or pieces[-1] == "Knight":
+        if len(piecesToCheck[1]) == 2 and len(piecesToCheck[-1]) == 2:
+            if piecesToCheck[1].getType() == "Knight" or piecesToCheck[-1].getType() == "Knight":
                 return False
             
-            if (pieces[1].getX() % 2 == pieces[1].getY() % 2) == (pieces[-1].getX() % 2 == pieces[-1].getY() % 2):
+            if (piecesToCheck[1].getX() % 2 == piecesToCheck[1].getY() % 2) == (piecesToCheck[-1].getX() % 2 == piecesToCheck[-1].getY() % 2):
                 return False
             
         return True
@@ -597,9 +601,9 @@ class Pawn(Piece):
         moves = []
         for x in range(-1, 2):
             if -1 < self.x + x and self.x + x < 8:
-                if x == 0 and not board.isOccupied(self.x + x, self.y + self.color):
+                if x == 0 and not board.isOccupied([self.x + x, self.y + self.color]):
                     moves.append([self.x + x, self.y + self.color, False])
-                elif x != 0 and board.checkCapture(self.x + x, self.y + self.color, self.color):
+                elif x != 0 and board.checkCapture([self.x + x, self.y + self.color], self.color):
                     moves.append([self.x + x, self.y + self.color, True])
 
         if self.firstMove:
@@ -630,34 +634,34 @@ class Rook(Piece):
         """
         moves = []
         for x in range(self.x+1, 8):
-            if not board.isOccupied(x, self.y):
+            if not board.isOccupied([x, self.y]):
                 moves.append([x, self.y, False])
             else:
-                if board.checkCapture(x, self.y, self.color):
+                if board.checkCapture([x, self.y], self.color):
                     moves.append([x, self.y, True])
                 break
 
         for x in range(self.x-1, -1, -1):
-            if not board.isOccupied(x, self.y):
+            if not board.isOccupied([x, self.y]):
                 moves.append([x, self.y, False])
             else:
-                if board.checkCapture(x, self.y, self.color):
+                if board.checkCapture([x, self.y], self.color):
                     moves.append([x, self.y, True])
                 break
 
         for y in range(self.y+1, 8):
-            if not board.isOccupied(self.x, y):
+            if not board.isOccupied([self.x, y]):
                 moves.append([self.x, y, False])
             else:
-                if board.checkCapture(self.x, y, self.color):
+                if board.checkCapture([self.x, y], self.color):
                     moves.append([self.x, y, True])
                 break
 
         for y in range(self.y-1, -1, -1):
-            if not board.isOccupied(self.x, y):
+            if not board.isOccupied([self.x, y]):
                 moves.append([self.x, y, False])
             else:
-                if board.checkCapture(self.x, y, self.color):
+                if board.checkCapture([self.x, y], self.color):
                     moves.append([self.x, y, True])
                 break
         return moves
@@ -675,38 +679,38 @@ class Bishop(Piece):
         for x in range(self.x + 1, 8):
             y = self.y + (x - self.x)
             if y < 8:
-                if not board.isOccupied(x, y):
+                if not board.isOccupied([x, y]):
                     moves.append([x, y, False])
                 else:
-                    if board.checkCapture(x, y, self.color):
+                    if board.checkCapture([x, y], self.color):
                         moves.append([x, y, True])
                     break
             
             y = self.y - (x - self.x)
             if -1 < y:
-                if not board.isOccupied(x, y):
+                if not board.isOccupied([x, y]):
                     moves.append([x, y, False])
                 else:
-                    if board.checkCapture(x, y, self.color):
+                    if board.checkCapture([x, y], self.color):
                         moves.append([x, y, True])
                     break
 
         for x in range(self.x - 1, -1, -1):
             y = self.y - (x - self.x)
             if y < 8:
-                if not board.isOccupied(x, y):
+                if not board.isOccupied([x, y]):
                     moves.append([x, y, False])
                 else:
-                    if board.checkCapture(x, y, self.color):
+                    if board.checkCapture([x, y], self.color):
                         moves.append([x, y, True])
                     break
 
             y = self.y + (x - self.x)
             if -1 < y:
-                if not board.isOccupied(x, y):
+                if not board.isOccupied([x, y]):
                     moves.append([x, y, False])
                 else:
-                    if board.checkCapture(x, y, self.color):
+                    if board.checkCapture([x, y], self.color):
                         moves.append([x, y, True])
                     break
         return moves
@@ -723,9 +727,9 @@ class Knight(Piece):
         moves = []
         for move in [[1, 2], [1, -2], [-1, 2], [-1, -2], [2, 1], [2, -1], [-2, 1], [-2, -1]]:
             if -1 < self.x + move[0] and self.x + move[0] < 8 and -1 < self.y + move[1] and self.y + move[1] < 8:
-                if not board.isOccupied(self.x + move[0], self.y + move[1]):
+                if not board.isOccupied([self.x + move[0], self.y + move[1]]):
                     moves.append([self.x + move[0], self.y + move[1], False])
-                elif board.checkCapture(self.x + move[0], self.y + move[1], self.color):
+                elif board.checkCapture([self.x + move[0], self.y + move[1]], self.color):
                     moves.append([self.x + move[0], self.y + move[1], True])
         return moves
 
@@ -741,9 +745,9 @@ class King(Piece):
         moves = []
         for x in range(-1, 2):
             for y in range(-1, 2):
-                if not board.isOccupied(self.x + x, self.y + y) and not board.checkCheck(self):
+                if not board.isOccupied([self.x + x, self.y + y]) and not board.checkCheck(self):
                     moves.append([self.x + x, self.y + y, False])
-                elif board.checkCapture(self.x + x, self.y + y, self.color) and not board.checkCheck(self):
+                elif board.checkCapture([self.x + x, self.y + y], self.color) and not board.checkCheck(self):
                     moves.append([self.x + x, self.y + y, True])
         return moves
 
