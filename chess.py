@@ -1,6 +1,5 @@
 #TODO Repetion draw implementation
 #TODO Increase robustness of human player getMove
-#TODO Add func to take piece coords + move and execute move
 #TODO Crate func to return board state for AI learning or similar
 
 class Board:
@@ -246,7 +245,7 @@ class Board:
         """
         Performs a capture move, useing move and piecedata
         """
-        i, j = self.findPiece(move[0], move[1], -self.cPlayer)
+        i, j = self.findPiece([move[0], move[1]], -self.cPlayer)
         self.pieces[-self.cPlayer][i][j].setCaptured(True)
         self.pieces[self.cPlayer][pieceID[0]][pieceID[1]].move(move)
 
@@ -336,7 +335,7 @@ class Board:
         for i in range(2): #Hardcodes since only the first two rooks can castle and dynamicly doing it for len might lead to problems with promoted pieces.
             if self.pieces[self.cPlayer][1][i].getFirstMove():
                 for x in range(sorted([self.pieces[self.cPlayer][1][i].getX(), king.getX()])):
-                    if self.isOccupied(x, king.getY()):
+                    if self.isOccupied([x, king.getY()]):
                         castlingPossible[i] = False
                         break
             else:
@@ -473,7 +472,7 @@ class Board:
         Returns, true for check otherwise false
         """
         oldPos = [self.pieces[self.cPlayer][pieceID[0]][pieceID[1]].getX(), self.pieces[self.cPlayer][pieceID[0]][pieceID[1]].getY()]
-        i, j = self.findPiece(move[0], move[1], -self.pieces[self.cPlayer][pieceID[0]][pieceID[1]].getColor())
+        i, j = self.findPiece([move[0], move[1]], -self.pieces[self.cPlayer][pieceID[0]][pieceID[1]].getColor())
 
         self.pieces[-self.cPlayer][i][j].setCaptured(True)
         self.pieces[self.cPlayer][pieceID[0]][pieceID[1]].move(move)
